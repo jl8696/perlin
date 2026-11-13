@@ -6,6 +6,9 @@
     "url": "https://github.com/OfficeDev/Office-Add-in-samples.git"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.15.0"
+  },
   "config": {
     "app_to_debug": "powerpoint",
     "app_type_to_debug": "desktop",
@@ -15,15 +18,16 @@
     "build": "webpack --mode production",
     "build:dev": "webpack --mode development",
     "dev-server": "webpack serve --mode development",
-    "lint": "office-addin-lint check --files \"{content.js,webpack.config.js}\"",
-    "lint:fix": "office-addin-lint fix --files \"{content.js,webpack.config.js}\"",
-    "prettier": "office-addin-lint prettier --files \"{content.js,webpack.config.js}\"",
+    "lint": "office-addin-lint check --files \"{content.js,build-url.cjs,webpack.config.js}\"",
+    "lint:fix": "office-addin-lint fix --files \"{content.js,build-url.cjs,webpack.config.js}\"",
+    "prettier": "office-addin-lint prettier --files \"{content.js,build-url.cjs,webpack.config.js}\"",
     "signin": "office-addin-dev-settings m365-account login",
     "signout": "office-addin-dev-settings m365-account logout",
     "start": "office-addin-debugging start manifest.json",
     "start:prod": "office-addin-dev-settings sideload ./dist/manifest.json",
     "stop": "office-addin-debugging stop manifest.json",
     "stop:prod": "office-addin-dev-settings unregister ./dist/manifest.json",
+    "package:addin": "powershell -ExecutionPolicy Bypass -File .\\package-app.ps1",
     "test": "node --test ./tests/addin.test.cjs",
     "validate": "office-addin-manifest validate manifest.json",
     "watch": "webpack --mode development --watch"

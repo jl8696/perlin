@@ -12,6 +12,8 @@ From PowerShell in this folder:
 
 The script starts the HTTPS development server and sideloads the add-in into desktop PowerPoint. If the content does not appear automatically, open **Home > Add-ins** and choose **Particle Background**.
 
+On a fresh checkout, the script installs the npm dependencies before starting PowerPoint. Node.js 22.15 or newer is required.
+
 To stop the server and unregister the development add-in:
 
 ```powershell
@@ -37,8 +39,8 @@ Localhost is only for development. To distribute the animation:
 
 1. Host the generated web files from `dist` on an approved HTTPS site.
 2. Set `ADDIN_PROD_URL` to the final HTTPS directory, including the trailing slash.
-3. Run `npm run build`.
-4. Ask the Microsoft 365 administrator to deploy `dist/manifest.json` through Integrated apps.
+3. Run `npm run package:addin`.
+4. Ask the Microsoft 365 administrator to deploy `dist/particle-background-app-package.zip` through Integrated apps.
 5. Share the PowerPoint presentation after the add-in is available to its recipients.
 
 The presentation stores a reference to the add-in. It does not embed the HTML and JavaScript inside the `.pptx` file.
@@ -47,8 +49,10 @@ Example production build:
 
 ```powershell
 $env:ADDIN_PROD_URL = "https://intranet.example.com/powerpoint-particle-addin/"
-npm run build
+npm run package:addin
 ```
+
+Before production deployment, replace the placeholder developer website, privacy, and terms URLs in `manifest.json` with approved corporate pages.
 
 ## Source
 

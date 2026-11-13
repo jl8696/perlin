@@ -3,9 +3,7 @@
 const devCerts = require("office-addin-dev-certs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-
-const urlDev = "https://localhost:3000/";
-const urlProd = process.env.ADDIN_PROD_URL || urlDev;
+const { resolveProductionUrl, transformManifest } = require("./build-url.cjs");
 
 async function getHttpsOptions() {
   const httpsOptions = await devCerts.getHttpsServerOptions();
@@ -14,6 +12,7 @@ async function getHttpsOptions() {
 
 module.exports = async (env, options) => {
   const dev = options.mode === "development";
+  const urlProd = dev ? undefined : resolveProductionUrl(process.env.ADDIN_PROD_URL);
   const config = {
     devtool: "source-map",
     entry: {
@@ -65,11 +64,7 @@ module.exports = async (env, options) => {
             from: "manifest*.*",
             to: "[name]" + "[ext]",
             transform(content) {
-              if (dev) {
-                return content;
-              } else {
-                return content.toString().replace(new RegExp(urlDev, "g"), urlProd);
-              }
+              return transformManifest(content.toString(), dev, urlProd);
             },
           },
         ],

@@ -28,3 +28,4 @@ _storage_emulator
 
 # production
 /build
+dist/*.zip

@@ -58,5 +58,59 @@ test("production builds never fall back to Microsoft's sample host", () => {
 
   assert.doesNotMatch(webpack, /officedev\.github\.io/);
   assert.match(webpack, /ADDIN_PROD_URL/);
-  assert.match(webpack, /const urlProd = process\.env\.ADDIN_PROD_URL \|\| urlDev/);
+  assert.doesNotMatch(webpack, /ADDIN_PROD_URL \|\| urlDev/);
+});
+
+test("production URLs are required, HTTPS, and normalized", () => {
+  let buildUrl;
+  assert.doesNotThrow(() => {
+    buildUrl = require("../build-url.cjs");
+  });
+
+  assert.throws(() => buildUrl.resolveProductionUrl(), /ADDIN_PROD_URL is required/);
+  assert.throws(
+    () => buildUrl.resolveProductionUrl("http://example.com/addin"),
+    /must use HTTPS/
+  );
+  assert.equal(
+    buildUrl.resolveProductionUrl("https://example.com/addin"),
+    "https://example.com/addin/"
+  );
+});
+
+test("production manifest transformation updates the page and authorized domain", () => {
+  const { transformManifest } = require("../build-url.cjs");
+  const source = JSON.stringify({
+    validDomains: ["localhost"],
+    extensions: [{ contentRuntimes: [{ code: { page: "https://localhost:3000/content.html" } }] }],
+  });
+  const transformed = JSON.parse(
+    transformManifest(source, false, "https://example.com/addin/")
+  );
+
+  assert.equal(
+    transformed.extensions[0].contentRuntimes[0].code.page,
+    "https://example.com/addin/content.html"
+  );
+  assert.deepEqual(transformed.validDomains, ["example.com"]);
+});
+
+test("manifest uses least privilege and package-ready icon sizes", () => {
+  const manifest = JSON.parse(read("manifest.json"));
+
+  assert.deepEqual(manifest.authorization.permissions, {});
+  assert.equal(manifest.icons.color, "assets/icon-192.png");
+  assert.ok(fs.existsSync(path.join(root, "assets", "icon-192.png")));
+});
+
+test("fresh-start and app-package scripts cover setup and deployment", () => {
+  const packageJson = JSON.parse(read("package.json"));
+  const startScript = read("start-local.ps1");
+  const packageScript = read("package-app.ps1");
+
+  assert.match(startScript, /node_modules/);
+  assert.match(startScript, /npm install/);
+  assert.match(packageJson.scripts["package:addin"], /package-app\.ps1/);
+  assert.match(packageScript, /particle-background-app-package\.zip/);
+  assert.equal(packageJson.engines.node, ">=22.15.0");
 });

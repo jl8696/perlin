@@ -22,26 +22,21 @@
   },
   "icons": {
     "outline": "assets/icon-32.png",
-    "color": "assets/icon-64.png"
+    "color": "assets/icon-192.png"
   },
   "accentColor": "#FFFFFF",
   "validDomains": [
     "localhost"
   ],
   "authorization": {
-    "permissions": {
-      "resourceSpecific": [
-        {
-          "name": "Document.ReadWrite.User",
-          "type": "Delegated"
-        }
-      ]
-    }
+    "permissions": {}
   },
   "extensions": [
     {
       "requirements": {
-        "scopes": [ "presentation" ],
+        "scopes": [
+          "presentation"
+        ],
         "capabilities": [
           {
             "name": "PowerPointApi",
