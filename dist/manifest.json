@@ -26,7 +26,7 @@
   },
   "accentColor": "#FFFFFF",
   "validDomains": [
-    "localhost"
+    "jl8696.github.io"
   ],
   "authorization": {
     "permissions": {}
@@ -48,7 +48,7 @@
         {
           "id": "ContentRuntime",
           "code": {
-            "page": "https://localhost:3000/content.html"
+            "page": "https://jl8696.github.io/perlin/content.html"
           },
           "requestedWidth": 960,
           "requestedHeight": 540,
