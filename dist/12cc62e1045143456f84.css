@@ -1,0 +1,23 @@
+html,
+body,
+#particle-background {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+
+#particle-background {
+  position: fixed;
+  inset: 0;
+}
+
+canvas {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}

@@ -2,23 +2,23 @@
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.27/MicrosoftTeams.schema.json",
   "manifestVersion": "1.27",
   "version": "1.0.0",
-  "id": "f3f6aab2-a9d3-4378-95a6-9526a6a62cd5",
+  "id": "38f0f113-acff-47b1-9689-bdce5be200e6",
   "localizationInfo": {
     "defaultLanguageTag": "en-us"
   },
   "developer": {
-    "name": "Contoso",
+    "name": "Particle Background",
     "websiteUrl": "https://www.contoso.com",
     "privacyUrl": "https://www.contoso.com/privacy",
     "termsOfUseUrl": "https://www.contoso.com/terms"
   },
   "name": {
-    "short": "PowerPoint Content Add-in",
-    "full": "PowerPoint Hello-World Content Add-in"
+    "short": "Particle Background",
+    "full": "Live Particle Background for PowerPoint"
   },
   "description": {
-    "short": "A content add-in for PowerPoint.",
-    "full": "A hello-world content add-in for PowerPoint."
+    "short": "A live p5.js particle background for PowerPoint.",
+    "full": "Displays a continuous p5.js particle animation inside a PowerPoint slide."
   },
   "icons": {
     "outline": "assets/icon-32.png",
@@ -26,9 +26,7 @@
   },
   "accentColor": "#FFFFFF",
   "validDomains": [
-    "AppDomain1",
-    "AppDomain2",
-    "AppDomain3"
+    "localhost"
   ],
   "authorization": {
     "permissions": {
@@ -57,8 +55,8 @@
           "code": {
             "page": "https://localhost:3000/content.html"
           },
-          "requestedWidth": 400,
-          "requestedHeight": 400,
+          "requestedWidth": 960,
+          "requestedHeight": 540,
           "disableSnapshot": true
         }
       ]

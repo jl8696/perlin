@@ -1,9 +1,9 @@
 {
-  "name": "office-addin-taskpane-js",
-  "version": "0.0.1",
+  "name": "powerpoint-particle-background",
+  "version": "1.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OfficeDev/Office-Addin-TaskPane-JS.git"
+    "url": "https://github.com/OfficeDev/Office-Add-in-samples.git"
   },
   "license": "MIT",
   "config": {
@@ -15,20 +15,22 @@
     "build": "webpack --mode production",
     "build:dev": "webpack --mode development",
     "dev-server": "webpack serve --mode development",
-    "lint": "office-addin-lint check",
-    "lint:fix": "office-addin-lint fix",
-    "prettier": "office-addin-lint prettier",
+    "lint": "office-addin-lint check --files \"{content.js,webpack.config.js}\"",
+    "lint:fix": "office-addin-lint fix --files \"{content.js,webpack.config.js}\"",
+    "prettier": "office-addin-lint prettier --files \"{content.js,webpack.config.js}\"",
     "signin": "office-addin-dev-settings m365-account login",
     "signout": "office-addin-dev-settings m365-account logout",
     "start": "office-addin-debugging start manifest.json",
     "start:prod": "office-addin-dev-settings sideload ./dist/manifest.json",
     "stop": "office-addin-debugging stop manifest.json",
     "stop:prod": "office-addin-dev-settings unregister ./dist/manifest.json",
+    "test": "node --test ./tests/addin.test.cjs",
     "validate": "office-addin-manifest validate manifest.json",
     "watch": "webpack --mode development --watch"
   },
   "dependencies": {
     "core-js": "^3.36.0",
+    "p5": "^1.11.13",
     "regenerator-runtime": "^0.14.1"
   },
   "devDependencies": {
