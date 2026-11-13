@@ -21,8 +21,10 @@ test("particle runtime bundles p5 and waits for the Office host", () => {
 
   assert.match(source, /import p5 from "p5"/);
   assert.match(source, /Office\.onReady/);
+  assert.match(source, /Office\.onReady\(\)\.then\(startAnimation\)\.catch/);
   assert.match(source, /new p5\(/);
   assert.match(source, /windowResized/);
+  assert.doesNotMatch(source, /setTimeout\(startAnimation/);
 });
 
 test("animation frame and canvas fill the content add-in", () => {

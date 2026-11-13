@@ -1,6 +1,6 @@
 import p5 from "p5";
 
-/* global Office, document, window */
+/* global Office, console, document */
 
 const options = {
   background: "#0a0a0a",
@@ -132,9 +132,16 @@ function startAnimation() {
   }
 }
 
+function handleOfficeReadyFailure(error) {
+  console.warn(
+    "Office host initialization failed; starting the visual without Office APIs.",
+    error
+  );
+  startAnimation();
+}
+
 if (typeof Office !== "undefined" && Office.onReady) {
-  Office.onReady(startAnimation);
-  window.setTimeout(startAnimation, 1500);
+  Office.onReady().then(startAnimation).catch(handleOfficeReadyFailure);
 } else {
   startAnimation();
 }
