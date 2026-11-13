@@ -20,8 +20,8 @@ canvas {
   inset: 0;
   width: 100% !important;
   height: 100% !important;
-  opacity: 0.3;
-  filter: url("#powerpoint-glass") contrast(1.9) saturate(1.6) brightness(1.18);
+  opacity: 1;
+  filter: url("#powerpoint-glass") contrast(1.45) saturate(1.1) brightness(1.12);
 }
 
 .filter-definitions {

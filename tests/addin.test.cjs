@@ -37,30 +37,48 @@ test("animation frame and canvas fill the content add-in", () => {
   assert.match(css, /canvas[\s\S]*position:\s*fixed/);
 });
 
-test("particles render at 30 percent through a live glass filter", () => {
+test("particles render at 30 percent beneath an anchored etched-glass treatment", () => {
   const html = read("content.html");
   const css = read("content.css");
   const source = read("content.js");
 
   assert.match(html, /id="powerpoint-glass"/);
   assert.match(html, /feTurbulence/);
-  assert.doesNotMatch(html, /feDisplacementMap/);
+  assert.match(html, /feDisplacementMap/);
+  assert.match(html, /scale="3"/);
   assert.match(html, /feConvolveMatrix/);
+  assert.match(html, /feDiffuseLighting/);
+  assert.match(html, /feSpecularLighting/);
+  assert.match(html, /feDistantLight/);
+  assert.match(html, /result="sparkled-grain"/);
+  assert.match(html, /result="dimmed-source"/);
+  assert.match(html, /<feFuncA type="linear" slope="0\.3" \/>/);
+  assert.match(html, /in="dimmed-source" in2="glass-texture" mode="screen"/);
   assert.match(html, /feComposite/);
   assert.match(html, /feComponentTransfer/);
   assert.match(html, /type="luminanceToAlpha"/);
-  assert.match(html, /in2="trail-mask"/);
-  assert.match(html, /result="coarse-grain"/);
-  assert.match(html, /type="discrete"/);
-  assert.match(css, /canvas[\s\S]*opacity:\s*0\.3/);
+  assert.match(html, /result="expanded-trail-mask"/);
+  assert.match(css, /canvas[\s\S]*opacity:\s*1/);
   assert.doesNotMatch(source, /particleOpacity/);
   assert.match(source, /255\s*\*\s*fadeRatio/);
   assert.match(source, /this\.velocity\.mult\(0\.2\)/);
   assert.match(source, /noiseScale:\s*800/);
-  assert.match(css, /canvas[\s\S]*filter:\s*url\("#powerpoint-glass"\)[\s\S]*contrast\(1\.9\)/);
+  assert.match(css, /canvas[\s\S]*filter:\s*url\("#powerpoint-glass"\)[\s\S]*contrast\(1\.45\)/);
   assert.doesNotMatch(html, /glass-overlay/);
   assert.doesNotMatch(css, /glass-overlay\.png/);
   assert.equal(fs.existsSync(path.join(root, "assets", "glass-overlay.png")), false);
+});
+
+test("host resize preserves particle state and the accumulated frame", () => {
+  const source = read("content.js");
+
+  assert.match(source, /Math\.min\(sketch\.deltaTime, 50\)/);
+  assert.match(source, /if \(size\.width === sketch\.width && size\.height === sketch\.height\)/);
+  assert.match(source, /const previousFrame = sketch\.get\(\)/);
+  assert.match(source, /sketch\.resizeCanvas\(size\.width, size\.height, true\)/);
+  assert.match(source, /sketch\.image\(previousFrame, 0, 0, size\.width, size\.height\)/);
+  assert.match(source, /particle\.scalePosition\(scaleX, scaleY\)/);
+  assert.doesNotMatch(source, /particles\.forEach\(\(particle\) => particle\.respawn\(true\)\)/);
 });
 
 test("webpack builds the JavaScript runtime and the manifest names the add-in", () => {

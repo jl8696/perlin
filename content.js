@@ -24,7 +24,7 @@ function createParticleSketch(sketch) {
     }
 
     move(iterations) {
-      this.life -= sketch.deltaTime / 1000;
+      this.life -= Math.min(sketch.deltaTime, 50) / 1000;
       if (this.life < 0) {
         this.respawn();
       }
@@ -59,6 +59,11 @@ function createParticleSketch(sketch) {
         sketch.random(-50, sketch.height + 50)
       );
       this.life = randomizeLife ? sketch.random(0, options.lifeSeconds) : options.lifeSeconds;
+    }
+
+    scalePosition(scaleX, scaleY) {
+      this.position.x *= scaleX;
+      this.position.y *= scaleY;
     }
 
     display(radius) {
@@ -117,10 +122,19 @@ function createParticleSketch(sketch) {
 
   sketch.windowResized = () => {
     const size = frameSize();
-    sketch.resizeCanvas(size.width, size.height);
-    backgroundColor = sketch.color(options.background);
+    if (size.width === sketch.width && size.height === sketch.height) {
+      return;
+    }
+
+    const previousFrame = sketch.get();
+    const scaleX = size.width / sketch.width;
+    const scaleY = size.height / sketch.height;
+
+    particles.forEach((particle) => particle.scalePosition(scaleX, scaleY));
+    sketch.resizeCanvas(size.width, size.height, true);
     sketch.background(backgroundColor);
-    particles.forEach((particle) => particle.respawn(true));
+    sketch.image(previousFrame, 0, 0, size.width, size.height);
+    sketch.noStroke();
   };
 }
 

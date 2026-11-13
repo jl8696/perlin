@@ -13,42 +13,89 @@
   <svg class="filter-definitions" aria-hidden="true" width="0" height="0">
     <defs>
       <filter id="powerpoint-glass" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+        <feComponentTransfer in="SourceGraphic" result="dimmed-source">
+          <feFuncA type="linear" slope="0.3" />
+        </feComponentTransfer>
         <feTurbulence
           type="fractalNoise"
-          baseFrequency="0.16 0.22"
-          numOctaves="2"
-          seed="11"
-          result="glass-noise"
+          baseFrequency="0.012 0.045"
+          numOctaves="3"
+          seed="8"
+          result="refraction-map"
         />
-        <feComponentTransfer in="glass-noise" result="coarse-grain">
-          <feFuncR type="discrete" tableValues="0 0 0.2 0.55 0.85 1" />
-          <feFuncG type="discrete" tableValues="0 0.08 0.3 0.62 0.9 1" />
-          <feFuncB type="discrete" tableValues="0.05 0.18 0.45 0.72 0.95 1" />
-          <feFuncA type="linear" slope="1" />
-        </feComponentTransfer>
-        <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="trail-mask" />
-        <feComposite
-          in="coarse-grain"
-          in2="trail-mask"
-          operator="in"
-          result="grain-on-trails"
+        <feGaussianBlur in="refraction-map" stdDeviation="0.35" result="soft-refraction" />
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="soft-refraction"
+          scale="3"
+          xChannelSelector="R"
+          yChannelSelector="B"
+          result="refracted"
         />
-        <feBlend in="SourceGraphic" in2="grain-on-trails" mode="screen" result="grainy-trails" />
         <feConvolveMatrix
-          in="grainy-trails"
+          in="refracted"
           order="3"
-          kernelMatrix="0 -1 0 -1 5 -1 0 -1 0"
+          kernelMatrix="-1 -1 -1 -1 9 -1 -1 -1 -1"
           preserveAlpha="true"
-          result="etched"
+          result="etched-source"
         />
-        <feColorMatrix in="etched" type="saturate" values="2.2" result="saturated" />
-        <feComponentTransfer in="saturated" result="highlighted">
-          <feFuncR type="gamma" amplitude="1.7" exponent="0.72" offset="-0.03" />
-          <feFuncG type="gamma" amplitude="1.7" exponent="0.72" offset="-0.03" />
-          <feFuncB type="gamma" amplitude="1.7" exponent="0.72" offset="-0.03" />
+        <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="trail-luminance" />
+        <feComponentTransfer in="trail-luminance" result="trail-mask">
+          <feFuncA type="table" tableValues="0 0 0 0.35 1" />
+        </feComponentTransfer>
+        <feMorphology
+          in="trail-mask"
+          operator="dilate"
+          radius="1.5"
+          result="expanded-trail-mask"
+        />
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.72"
+          numOctaves="2"
+          seed="21"
+          result="micro-texture"
+        />
+        <feDiffuseLighting
+          in="micro-texture"
+          surfaceScale="4"
+          diffuseConstant="1.25"
+          lighting-color="#ffffff"
+          result="lit-grain"
+        >
+          <feDistantLight azimuth="225" elevation="48" />
+        </feDiffuseLighting>
+        <feSpecularLighting
+          in="micro-texture"
+          surfaceScale="7"
+          specularConstant="2.4"
+          specularExponent="12"
+          lighting-color="#ffffff"
+          result="specular-grain"
+        >
+          <feDistantLight azimuth="225" elevation="48" />
+        </feSpecularLighting>
+        <feComponentTransfer in="lit-grain" result="faceted-grain">
+          <feFuncR type="discrete" tableValues="0 0.08 0.24 0.52 0.82 1" />
+          <feFuncG type="discrete" tableValues="0 0.08 0.24 0.52 0.82 1" />
+          <feFuncB type="discrete" tableValues="0 0.08 0.24 0.52 0.82 1" />
+        </feComponentTransfer>
+        <feBlend in="faceted-grain" in2="specular-grain" mode="screen" result="sparkled-grain" />
+        <feComposite
+          in="sparkled-grain"
+          in2="expanded-trail-mask"
+          operator="in"
+          result="etched-grain"
+        />
+        <feBlend in="etched-source" in2="etched-grain" mode="screen" result="etched-glass" />
+        <feColorMatrix in="etched-glass" type="saturate" values="1.35" result="saturated-glass" />
+        <feComponentTransfer in="saturated-glass" result="glass-texture">
+          <feFuncR type="gamma" amplitude="1.35" exponent="0.78" offset="-0.02" />
+          <feFuncG type="gamma" amplitude="1.35" exponent="0.78" offset="-0.02" />
+          <feFuncB type="gamma" amplitude="1.35" exponent="0.78" offset="-0.02" />
           <feFuncA type="linear" slope="1" />
         </feComponentTransfer>
-        <feBlend in="SourceGraphic" in2="highlighted" mode="screen" />
+        <feBlend in="dimmed-source" in2="glass-texture" mode="screen" />
       </filter>
     </defs>
   </svg>
