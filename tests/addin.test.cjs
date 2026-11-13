@@ -37,15 +37,18 @@ test("animation frame and canvas fill the content add-in", () => {
   assert.match(css, /canvas[\s\S]*position:\s*fixed/);
 });
 
-test("particles render at 30 percent beneath a glass texture", () => {
+test("particles render at 30 percent through a live glass filter", () => {
   const html = read("content.html");
   const css = read("content.css");
 
-  assert.match(html, /id="glass-overlay"/);
+  assert.match(html, /id="powerpoint-glass"/);
+  assert.match(html, /feTurbulence/);
+  assert.match(html, /feDisplacementMap/);
   assert.match(css, /canvas[\s\S]*opacity:\s*0\.3/);
-  assert.match(css, /#glass-overlay[\s\S]*glass-overlay\.png/);
-  assert.match(css, /#glass-overlay[\s\S]*pointer-events:\s*none/);
-  assert.ok(fs.existsSync(path.join(root, "assets", "glass-overlay.png")));
+  assert.match(css, /canvas[\s\S]*filter:\s*url\("#powerpoint-glass"\)/);
+  assert.doesNotMatch(html, /glass-overlay/);
+  assert.doesNotMatch(css, /glass-overlay\.png/);
+  assert.equal(fs.existsSync(path.join(root, "assets", "glass-overlay.png")), false);
 });
 
 test("webpack builds the JavaScript runtime and the manifest names the add-in", () => {

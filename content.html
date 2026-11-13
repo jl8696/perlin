@@ -10,6 +10,29 @@
 </head>
 <body>
   <main id="particle-background" aria-label="Animated particle background"></main>
-  <div id="glass-overlay" aria-hidden="true"></div>
+  <svg class="filter-definitions" aria-hidden="true" width="0" height="0">
+    <defs>
+      <filter id="powerpoint-glass" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.012 0.018"
+          numOctaves="2"
+          seed="8"
+          result="glass-noise"
+        />
+        <feGaussianBlur in="glass-noise" stdDeviation="0.8" result="soft-noise" />
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="soft-noise"
+          scale="18"
+          xChannelSelector="R"
+          yChannelSelector="B"
+          result="refracted"
+        />
+        <feGaussianBlur in="refracted" stdDeviation="0.55" result="diffused" />
+        <feBlend in="refracted" in2="diffused" mode="screen" />
+      </filter>
+    </defs>
+  </svg>
 </body>
 </html>
