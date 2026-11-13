@@ -40,12 +40,24 @@ test("animation frame and canvas fill the content add-in", () => {
 test("particles render at 30 percent through a live glass filter", () => {
   const html = read("content.html");
   const css = read("content.css");
+  const source = read("content.js");
 
   assert.match(html, /id="powerpoint-glass"/);
   assert.match(html, /feTurbulence/);
-  assert.match(html, /feDisplacementMap/);
+  assert.doesNotMatch(html, /feDisplacementMap/);
+  assert.match(html, /feConvolveMatrix/);
+  assert.match(html, /feComposite/);
+  assert.match(html, /feComponentTransfer/);
+  assert.match(html, /type="luminanceToAlpha"/);
+  assert.match(html, /in2="trail-mask"/);
+  assert.match(html, /result="coarse-grain"/);
+  assert.match(html, /type="discrete"/);
   assert.match(css, /canvas[\s\S]*opacity:\s*0\.3/);
-  assert.match(css, /canvas[\s\S]*filter:\s*url\("#powerpoint-glass"\)/);
+  assert.doesNotMatch(source, /particleOpacity/);
+  assert.match(source, /255\s*\*\s*fadeRatio/);
+  assert.match(source, /this\.velocity\.mult\(0\.2\)/);
+  assert.match(source, /noiseScale:\s*800/);
+  assert.match(css, /canvas[\s\S]*filter:\s*url\("#powerpoint-glass"\)[\s\S]*contrast\(1\.9\)/);
   assert.doesNotMatch(html, /glass-overlay/);
   assert.doesNotMatch(css, /glass-overlay\.png/);
   assert.equal(fs.existsSync(path.join(root, "assets", "glass-overlay.png")), false);

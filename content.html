@@ -15,22 +15,40 @@
       <filter id="powerpoint-glass" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
         <feTurbulence
           type="fractalNoise"
-          baseFrequency="0.012 0.018"
+          baseFrequency="0.16 0.22"
           numOctaves="2"
-          seed="8"
+          seed="11"
           result="glass-noise"
         />
-        <feGaussianBlur in="glass-noise" stdDeviation="0.8" result="soft-noise" />
-        <feDisplacementMap
-          in="SourceGraphic"
-          in2="soft-noise"
-          scale="18"
-          xChannelSelector="R"
-          yChannelSelector="B"
-          result="refracted"
+        <feComponentTransfer in="glass-noise" result="coarse-grain">
+          <feFuncR type="discrete" tableValues="0 0 0.2 0.55 0.85 1" />
+          <feFuncG type="discrete" tableValues="0 0.08 0.3 0.62 0.9 1" />
+          <feFuncB type="discrete" tableValues="0.05 0.18 0.45 0.72 0.95 1" />
+          <feFuncA type="linear" slope="1" />
+        </feComponentTransfer>
+        <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="trail-mask" />
+        <feComposite
+          in="coarse-grain"
+          in2="trail-mask"
+          operator="in"
+          result="grain-on-trails"
         />
-        <feGaussianBlur in="refracted" stdDeviation="0.55" result="diffused" />
-        <feBlend in="refracted" in2="diffused" mode="screen" />
+        <feBlend in="SourceGraphic" in2="grain-on-trails" mode="screen" result="grainy-trails" />
+        <feConvolveMatrix
+          in="grainy-trails"
+          order="3"
+          kernelMatrix="0 -1 0 -1 5 -1 0 -1 0"
+          preserveAlpha="true"
+          result="etched"
+        />
+        <feColorMatrix in="etched" type="saturate" values="2.2" result="saturated" />
+        <feComponentTransfer in="saturated" result="highlighted">
+          <feFuncR type="gamma" amplitude="1.7" exponent="0.72" offset="-0.03" />
+          <feFuncG type="gamma" amplitude="1.7" exponent="0.72" offset="-0.03" />
+          <feFuncB type="gamma" amplitude="1.7" exponent="0.72" offset="-0.03" />
+          <feFuncA type="linear" slope="1" />
+        </feComponentTransfer>
+        <feBlend in="SourceGraphic" in2="highlighted" mode="screen" />
       </filter>
     </defs>
   </svg>
