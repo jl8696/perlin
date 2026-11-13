@@ -4,11 +4,16 @@ import p5 from "p5";
 
 const options = {
   background: "#0a0a0a",
-  colors: ["#ffffff", "#0799f2", "#45217c"],
+  colors: [
+    [255, 255, 255],
+    [7, 153, 242],
+    [69, 33, 124],
+  ],
   lifeSeconds: 10,
   particleCount: 400,
   particleSize: 2,
   noiseScale: 800,
+  speed: 0.34,
 };
 
 function createParticleSketch(sketch) {
@@ -16,19 +21,24 @@ function createParticleSketch(sketch) {
   let backgroundColor;
 
   class Particle {
-    constructor() {
+    constructor(index) {
       this.velocity = sketch.createVector(0, 0);
       this.position = sketch.createVector(0, 0);
+      this.previousPosition = sketch.createVector(0, 0);
+      this.color = options.colors[index % options.colors.length];
+      this.iterations = Math.ceil(sketch.map(index, 0, options.particleCount, 5, 1));
       this.life = 0;
       this.respawn(true);
     }
 
-    move(iterations) {
+    move(frameScale) {
+      this.previousPosition.set(this.position);
       this.life -= Math.min(sketch.deltaTime, 50) / 1000;
       if (this.life < 0) {
         this.respawn();
       }
 
+      let iterations = this.iterations;
       while (iterations > 0) {
         const angle =
           sketch.noise(this.position.x / options.noiseScale, this.position.y / options.noiseScale) *
@@ -36,7 +46,7 @@ function createParticleSketch(sketch) {
           options.noiseScale;
 
         this.velocity.set(sketch.cos(angle), sketch.sin(angle));
-        this.velocity.mult(0.2);
+        this.velocity.mult(options.speed * frameScale);
         this.position.add(this.velocity);
         iterations -= 1;
       }
@@ -58,16 +68,24 @@ function createParticleSketch(sketch) {
         sketch.random(-50, sketch.width + 50),
         sketch.random(-50, sketch.height + 50)
       );
+      this.previousPosition.set(this.position);
       this.life = randomizeLife ? sketch.random(0, options.lifeSeconds) : options.lifeSeconds;
     }
 
     scalePosition(scaleX, scaleY) {
       this.position.x *= scaleX;
       this.position.y *= scaleY;
+      this.previousPosition.x *= scaleX;
+      this.previousPosition.y *= scaleY;
     }
 
-    display(radius) {
-      sketch.ellipse(this.position.x, this.position.y, radius, radius);
+    display() {
+      sketch.line(
+        this.previousPosition.x,
+        this.previousPosition.y,
+        this.position.x,
+        this.position.y
+      );
     }
   }
 
@@ -85,22 +103,25 @@ function createParticleSketch(sketch) {
     const canvas = sketch.createCanvas(size.width, size.height);
     canvas.parent(size.host);
     sketch.pixelDensity(1);
-    sketch.noStroke();
+    sketch.strokeCap(sketch.ROUND);
+    sketch.strokeWeight(options.particleSize);
+    sketch.noFill();
 
     backgroundColor = sketch.color(options.background);
     sketch.background(backgroundColor);
 
     for (let index = 0; index < options.particleCount; index += 1) {
-      particles.push(new Particle());
+      particles.push(new Particle(index));
     }
   };
 
   sketch.draw = () => {
+    const frameScale = sketch.min(sketch.deltaTime / 16.6667, 1.5);
+
     for (let index = 0; index < particles.length; index += 1) {
       const particle = particles[index];
-      const iterations = sketch.map(index, 0, particles.length, 5, 1);
 
-      particle.move(iterations);
+      particle.move(frameScale);
       particle.checkEdge();
 
       let fadeRatio = sketch.min((particle.life * 5) / options.lifeSeconds, 1);
@@ -109,14 +130,8 @@ function createParticleSketch(sketch) {
         fadeRatio
       );
 
-      const particleColor = sketch.color(options.colors[index % options.colors.length]);
-      sketch.fill(
-        sketch.red(particleColor),
-        sketch.green(particleColor),
-        sketch.blue(particleColor),
-        255 * fadeRatio
-      );
-      particle.display(options.particleSize);
+      sketch.stroke(particle.color[0], particle.color[1], particle.color[2], 255 * fadeRatio);
+      particle.display();
     }
   };
 
@@ -134,7 +149,9 @@ function createParticleSketch(sketch) {
     sketch.resizeCanvas(size.width, size.height, true);
     sketch.background(backgroundColor);
     sketch.image(previousFrame, 0, 0, size.width, size.height);
-    sketch.noStroke();
+    sketch.strokeCap(sketch.ROUND);
+    sketch.strokeWeight(options.particleSize);
+    sketch.noFill();
   };
 }
 

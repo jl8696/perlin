@@ -37,23 +37,23 @@ test("animation frame and canvas fill the content add-in", () => {
   assert.match(css, /canvas[\s\S]*position:\s*fixed/);
 });
 
-test("particles render at 30 percent beneath an anchored etched-glass treatment", () => {
+test("particles render beneath a lightweight restrained glass treatment", () => {
   const html = read("content.html");
   const css = read("content.css");
   const source = read("content.js");
 
   assert.match(html, /id="powerpoint-glass"/);
-  assert.match(html, /feTurbulence/);
+  assert.equal((html.match(/<feTurbulence/g) || []).length, 1);
   assert.match(html, /feDisplacementMap/);
-  assert.match(html, /scale="3"/);
-  assert.match(html, /feConvolveMatrix/);
-  assert.match(html, /feDiffuseLighting/);
-  assert.match(html, /feSpecularLighting/);
-  assert.match(html, /feDistantLight/);
-  assert.match(html, /result="sparkled-grain"/);
+  assert.match(html, /scale="1\.5"/);
+  assert.doesNotMatch(html, /feConvolveMatrix/);
+  assert.doesNotMatch(html, /feDiffuseLighting/);
+  assert.doesNotMatch(html, /feSpecularLighting/);
   assert.match(html, /result="dimmed-source"/);
   assert.match(html, /<feFuncA type="linear" slope="0\.3" \/>/);
-  assert.match(html, /in="dimmed-source" in2="glass-texture" mode="screen"/);
+  assert.match(html, /result="restrained-glass"/);
+  assert.match(html, /<feFuncA type="linear" slope="0\.24" \/>/);
+  assert.match(html, /in="dimmed-source" in2="restrained-glass" mode="screen"/);
   assert.match(html, /feComposite/);
   assert.match(html, /feComponentTransfer/);
   assert.match(html, /type="luminanceToAlpha"/);
@@ -61,12 +61,25 @@ test("particles render at 30 percent beneath an anchored etched-glass treatment"
   assert.match(css, /canvas[\s\S]*opacity:\s*1/);
   assert.doesNotMatch(source, /particleOpacity/);
   assert.match(source, /255\s*\*\s*fadeRatio/);
-  assert.match(source, /this\.velocity\.mult\(0\.2\)/);
+  assert.match(source, /speed:\s*0\.34/);
+  assert.match(source, /const frameScale = sketch\.min\(sketch\.deltaTime \/ 16\.6667, 1\.5\)/);
+  assert.match(source, /this\.velocity\.mult\(options\.speed \* frameScale\)/);
   assert.match(source, /noiseScale:\s*800/);
-  assert.match(css, /canvas[\s\S]*filter:\s*url\("#powerpoint-glass"\)[\s\S]*contrast\(1\.45\)/);
+  assert.match(css, /canvas[\s\S]*filter:\s*url\("#powerpoint-glass"\)[\s\S]*contrast\(1\.15\)/);
   assert.doesNotMatch(html, /glass-overlay/);
   assert.doesNotMatch(css, /glass-overlay\.png/);
   assert.equal(fs.existsSync(path.join(root, "assets", "glass-overlay.png")), false);
+});
+
+test("particles use smooth continuous trails without per-frame color objects", () => {
+  const source = read("content.js");
+
+  assert.match(source, /colors:\s*\[\s*\[255, 255, 255\]/);
+  assert.match(source, /this\.iterations = Math\.ceil/);
+  assert.match(source, /sketch\.strokeCap\(sketch\.ROUND\)/);
+  assert.match(source, /sketch\.line\(/);
+  assert.doesNotMatch(source, /sketch\.ellipse\(/);
+  assert.doesNotMatch(source, /const particleColor = sketch\.color/);
 });
 
 test("host resize preserves particle state and the accumulated frame", () => {
