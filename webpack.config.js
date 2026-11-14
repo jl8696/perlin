@@ -53,6 +53,7 @@ module.exports = async (env, options) => {
         filename: "content.html",
         template: "./content.html",
         chunks: ["polyfill", "content"],
+        hash: !dev,
       }),
       new CopyWebpackPlugin({
         patterns: [

@@ -112,6 +112,7 @@ test("webpack builds the JavaScript runtime and the manifest names the add-in", 
   const manifest = JSON.parse(read("manifest.json"));
 
   assert.match(webpack, /content:\s*\[?"\.\/content\.js"\]?/);
+  assert.match(webpack, /hash:\s*!dev/);
   assert.equal(manifest.name.short, "Particle Background");
   assert.equal(manifest.name.full, "Live Particle Background for PowerPoint");
   assert.match(manifest.description.short, /live p5\.js particle background/i);
