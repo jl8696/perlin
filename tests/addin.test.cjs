@@ -37,38 +37,50 @@ test("animation frame and canvas fill the content add-in", () => {
   assert.match(css, /canvas[\s\S]*position:\s*fixed/);
 });
 
-test("particles render beneath a lightweight restrained glass treatment", () => {
+test("particles use a single GPU glass pass instead of an SVG filter stack", () => {
   const html = read("content.html");
   const css = read("content.css");
   const source = read("content.js");
 
-  assert.match(html, /id="powerpoint-glass"/);
-  assert.equal((html.match(/<feTurbulence/g) || []).length, 1);
-  assert.match(html, /feDisplacementMap/);
-  assert.match(html, /scale="1\.5"/);
-  assert.doesNotMatch(html, /feConvolveMatrix/);
-  assert.doesNotMatch(html, /feDiffuseLighting/);
-  assert.doesNotMatch(html, /feSpecularLighting/);
-  assert.match(html, /result="dimmed-source"/);
-  assert.match(html, /<feFuncA type="linear" slope="0\.3" \/>/);
-  assert.match(html, /result="restrained-glass"/);
-  assert.match(html, /<feFuncA type="linear" slope="0\.24" \/>/);
-  assert.match(html, /in="dimmed-source" in2="restrained-glass" mode="screen"/);
-  assert.match(html, /feComposite/);
-  assert.match(html, /feComponentTransfer/);
-  assert.match(html, /type="luminanceToAlpha"/);
-  assert.match(html, /result="expanded-trail-mask"/);
+  assert.doesNotMatch(html, /id="powerpoint-glass"|<fe[A-Z]/);
+  assert.doesNotMatch(css, /filter:\s*url/);
   assert.match(css, /canvas[\s\S]*opacity:\s*1/);
+  assert.match(source, /createCanvas\(size\.width, size\.height, sketch\.WEBGL\)/);
+  assert.match(source, /createGraphics\(size\.width, size\.height\)/);
+  assert.match(source, /createShader\(vertexShaderSource, fragmentShaderSource\)/);
+  assert.match(source, /glassShader\.setUniform\("uTrailTexture", trailLayer\)/);
+  assert.match(source, /uniform sampler2D uTrailTexture/);
+  assert.match(source, /float edgeStrength/);
+  assert.match(source, /float stipple/);
+  assert.match(source, /float sparkle/);
+  assert.match(source, /vec3 glassHue/);
+  assert.match(source, /mix\(vec3\(mappedLuma\), toneMapped, 1\.8\)/);
+  assert.match(source, /vec3\(sparkle \* 0\.85\)/);
   assert.doesNotMatch(source, /particleOpacity/);
-  assert.match(source, /255\s*\*\s*fadeRatio/);
+  assert.match(source, /255\s*\*\s*options\.trailOpacity\s*\*\s*fadeRatio/);
   assert.match(source, /speed:\s*0\.34/);
   assert.match(source, /const frameScale = sketch\.min\(sketch\.deltaTime \/ 16\.6667, 1\.5\)/);
   assert.match(source, /this\.velocity\.mult\(options\.speed \* frameScale\)/);
   assert.match(source, /noiseScale:\s*800/);
-  assert.match(css, /canvas[\s\S]*filter:\s*url\("#powerpoint-glass"\)[\s\S]*contrast\(1\.15\)/);
   assert.doesNotMatch(html, /glass-overlay/);
   assert.doesNotMatch(css, /glass-overlay\.png/);
   assert.equal(fs.existsSync(path.join(root, "assets", "glass-overlay.png")), false);
+});
+
+test("trail history fades continuously with a long time-based half-life", () => {
+  const source = read("content.js");
+
+  assert.match(source, /particleCount:\s*500/);
+  assert.match(source, /trailHalfLifeSeconds:\s*18/);
+  assert.match(source, /trailOpacity:\s*0\.24/);
+  assert.match(
+    source,
+    /const fadeAmount = 1 - Math\.pow\(0\.5, deltaSeconds \/ options\.trailHalfLifeSeconds\)/
+  );
+  assert.match(source, /trailLayer\.fill\(10, 10, 10, 255 \* fadeAmount\)/);
+  assert.match(source, /trailLayer\.rect\(0, 0, trailLayer\.width, trailLayer\.height\)/);
+  assert.match(source, /255 \* options\.trailOpacity \* fadeRatio/);
+  assert.match(source, /vec3 toneMapped/);
 });
 
 test("particles use smooth continuous trails without per-frame color objects", () => {
@@ -76,9 +88,9 @@ test("particles use smooth continuous trails without per-frame color objects", (
 
   assert.match(source, /colors:\s*\[\s*\[255, 255, 255\]/);
   assert.match(source, /this\.iterations = Math\.ceil/);
-  assert.match(source, /sketch\.strokeCap\(sketch\.ROUND\)/);
-  assert.match(source, /sketch\.line\(/);
-  assert.doesNotMatch(source, /sketch\.ellipse\(/);
+  assert.match(source, /trailLayer\.strokeCap\(sketch\.ROUND\)/);
+  assert.match(source, /layer\.line\(/);
+  assert.doesNotMatch(source, /\.ellipse\(/);
   assert.doesNotMatch(source, /const particleColor = sketch\.color/);
 });
 
@@ -87,9 +99,10 @@ test("host resize preserves particle state and the accumulated frame", () => {
 
   assert.match(source, /Math\.min\(sketch\.deltaTime, 50\)/);
   assert.match(source, /if \(size\.width === sketch\.width && size\.height === sketch\.height\)/);
-  assert.match(source, /const previousFrame = sketch\.get\(\)/);
+  assert.match(source, /const previousFrame = trailLayer\.get\(\)/);
   assert.match(source, /sketch\.resizeCanvas\(size\.width, size\.height, true\)/);
-  assert.match(source, /sketch\.image\(previousFrame, 0, 0, size\.width, size\.height\)/);
+  assert.match(source, /trailLayer\.resizeCanvas\(size\.width, size\.height\)/);
+  assert.match(source, /trailLayer\.image\(previousFrame, 0, 0, size\.width, size\.height\)/);
   assert.match(source, /particle\.scalePosition\(scaleX, scaleY\)/);
   assert.doesNotMatch(source, /particles\.forEach\(\(particle\) => particle\.respawn\(true\)\)/);
 });
