@@ -37,60 +37,60 @@ test("animation frame and canvas fill the content add-in", () => {
   assert.match(css, /canvas[\s\S]*position:\s*fixed/);
 });
 
-test("particles use a single GPU glass pass instead of an SVG filter stack", () => {
+test("the complete accumulated frame receives one full-image GPU glass pass", () => {
   const html = read("content.html");
   const css = read("content.css");
   const source = read("content.js");
 
   assert.doesNotMatch(html, /id="powerpoint-glass"|<fe[A-Z]/);
   assert.doesNotMatch(css, /filter:\s*url/);
-  assert.match(css, /canvas[\s\S]*opacity:\s*1/);
+  assert.match(css, /canvas[\s\S]*opacity:\s*0\.65/);
   assert.match(source, /createCanvas\(size\.width, size\.height, sketch\.WEBGL\)/);
   assert.match(source, /createGraphics\(size\.width, size\.height\)/);
   assert.match(source, /createShader\(vertexShaderSource, fragmentShaderSource\)/);
   assert.match(source, /glassShader\.setUniform\("uTrailTexture", trailLayer\)/);
   assert.match(source, /uniform sampler2D uTrailTexture/);
-  assert.match(source, /float edgeStrength/);
-  assert.match(source, /float stipple/);
-  assert.match(source, /float sparkle/);
-  assert.match(source, /vec3 glassHue/);
-  assert.match(source, /mix\(vec3\(mappedLuma\), toneMapped, 1\.8\)/);
-  assert.match(source, /vec3\(sparkle \* 0\.85\)/);
+  assert.match(source, /vec3 gatherGlassNeighborhood/);
+  assert.match(source, /vec2 glassCell = floor\(gl_FragCoord\.xy \/ 5\.0\)/);
+  assert.match(source, /pixel \* 6\.0/);
+  assert.match(source, /float refractedEnergy/);
+  assert.match(source, /float facetLight/);
+  assert.doesNotMatch(source, /trailMask\s*\*/);
+  assert.doesNotMatch(source, /vec3\(silverEdge \+ glassChip\)/);
   assert.doesNotMatch(source, /particleOpacity/);
-  assert.match(source, /255\s*\*\s*options\.trailOpacity\s*\*\s*fadeRatio/);
-  assert.match(source, /speed:\s*0\.34/);
-  assert.match(source, /const frameScale = sketch\.min\(sketch\.deltaTime \/ 16\.6667, 1\.5\)/);
-  assert.match(source, /this\.velocity\.mult\(options\.speed \* frameScale\)/);
+  assert.match(source, /255\s*\*\s*fadeRatio/);
+  assert.match(source, /speed:\s*0\.2/);
+  assert.match(source, /this\.life -= 0\.01666/);
+  assert.match(source, /this\.velocity\.mult\(options\.speed\)/);
+  assert.doesNotMatch(source, /frameScale/);
   assert.match(source, /noiseScale:\s*800/);
   assert.doesNotMatch(html, /glass-overlay/);
   assert.doesNotMatch(css, /glass-overlay\.png/);
   assert.equal(fs.existsSync(path.join(root, "assets", "glass-overlay.png")), false);
 });
 
-test("trail history fades continuously with a long time-based half-life", () => {
+test("trail history clears quickly with a time-based half-life", () => {
   const source = read("content.js");
 
-  assert.match(source, /particleCount:\s*500/);
-  assert.match(source, /trailHalfLifeSeconds:\s*18/);
-  assert.match(source, /trailOpacity:\s*0\.24/);
+  assert.match(source, /particleCount:\s*400/);
+  assert.match(source, /trailHalfLifeSeconds:\s*3/);
   assert.match(
     source,
     /const fadeAmount = 1 - Math\.pow\(0\.5, deltaSeconds \/ options\.trailHalfLifeSeconds\)/
   );
   assert.match(source, /trailLayer\.fill\(10, 10, 10, 255 \* fadeAmount\)/);
   assert.match(source, /trailLayer\.rect\(0, 0, trailLayer\.width, trailLayer\.height\)/);
-  assert.match(source, /255 \* options\.trailOpacity \* fadeRatio/);
+  assert.match(source, /255 \* fadeRatio/);
   assert.match(source, /vec3 toneMapped/);
 });
 
-test("particles use smooth continuous trails without per-frame color objects", () => {
+test("particles retain the original point-based p5 rendering", () => {
   const source = read("content.js");
 
   assert.match(source, /colors:\s*\[\s*\[255, 255, 255\]/);
   assert.match(source, /this\.iterations = Math\.ceil/);
-  assert.match(source, /trailLayer\.strokeCap\(sketch\.ROUND\)/);
-  assert.match(source, /layer\.line\(/);
-  assert.doesNotMatch(source, /\.ellipse\(/);
+  assert.match(source, /layer\.ellipse\(this\.position\.x, this\.position\.y, options\.particleSize/);
+  assert.doesNotMatch(source, /layer\.line\(/);
   assert.doesNotMatch(source, /const particleColor = sketch\.color/);
 });
 

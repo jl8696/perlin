@@ -10,12 +10,11 @@ const options = {
     [69, 33, 124],
   ],
   lifeSeconds: 10,
-  particleCount: 500,
+  particleCount: 400,
   particleSize: 2,
   noiseScale: 800,
-  speed: 0.34,
-  trailHalfLifeSeconds: 18,
-  trailOpacity: 0.24,
+  speed: 0.2,
+  trailHalfLifeSeconds: 3,
 };
 
 const vertexShaderSource = `
@@ -67,60 +66,80 @@ const fragmentShaderSource = `
     return dot(color, vec3(0.2126, 0.7152, 0.0722));
   }
 
+  vec2 clampUv(vec2 uv, vec2 pixel) {
+    return clamp(uv, pixel * 8.0, vec2(1.0) - pixel * 8.0);
+  }
+
+  vec3 gatherGlassNeighborhood(vec2 uv, vec2 pixel) {
+    vec2 nearOffset = pixel * 2.0;
+    vec2 wideOffset = pixel * 6.0;
+    vec3 center = texture2D(uTrailTexture, clampUv(uv, pixel)).rgb;
+    vec3 horizontal =
+      texture2D(uTrailTexture, clampUv(uv + vec2(nearOffset.x, 0.0), pixel)).rgb +
+      texture2D(uTrailTexture, clampUv(uv - vec2(nearOffset.x, 0.0), pixel)).rgb;
+    vec3 vertical =
+      texture2D(uTrailTexture, clampUv(uv + vec2(0.0, nearOffset.y), pixel)).rgb +
+      texture2D(uTrailTexture, clampUv(uv - vec2(0.0, nearOffset.y), pixel)).rgb;
+    vec3 diagonal =
+      texture2D(uTrailTexture, clampUv(uv + wideOffset, pixel)).rgb +
+      texture2D(uTrailTexture, clampUv(uv - wideOffset, pixel)).rgb +
+      texture2D(uTrailTexture, clampUv(uv + vec2(wideOffset.x, -wideOffset.y), pixel)).rgb +
+      texture2D(uTrailTexture, clampUv(uv + vec2(-wideOffset.x, wideOffset.y), pixel)).rgb;
+    vec3 neighborhoodAverage = (center * 4.0 + horizontal + vertical + diagonal * 0.35) / 9.4;
+    return mix(center, neighborhoodAverage, 0.52);
+  }
+
   void main() {
     vec2 uv = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
     vec2 pixel = 1.0 / uResolution;
 
-    float warpX = valueNoise(uv * vec2(8.0, 4.5) + vec2(3.1, 7.7));
-    float warpY = valueNoise(uv * vec2(7.0, 5.5) + vec2(19.4, 2.3));
-    vec2 refraction = (vec2(warpX, warpY) - 0.5) * pixel * 4.0;
-    vec2 sampleUv = clamp(uv + refraction, pixel, vec2(1.0) - pixel);
+    vec2 glassCell = floor(gl_FragCoord.xy / 5.0);
+    vec2 cellJitter = vec2(
+      hash21(glassCell + vec2(11.0, 3.0)),
+      hash21(glassCell + vec2(5.0, 19.0))
+    ) - 0.5;
+    vec2 flowWarp = vec2(
+      valueNoise(uv * vec2(10.0, 6.0) + vec2(3.1, 7.7)),
+      valueNoise(uv * vec2(8.0, 7.0) + vec2(19.4, 2.3))
+    ) - 0.5;
+    vec2 refractedUv = clampUv(uv + (flowWarp * 3.0 + cellJitter * 1.5) * pixel, pixel);
 
-    vec3 center = texture2D(uTrailTexture, sampleUv).rgb;
-    float centerLuma = luminance(center);
-    float north = luminance(texture2D(uTrailTexture, sampleUv + vec2(0.0, pixel.y)).rgb);
-    float south = luminance(texture2D(uTrailTexture, sampleUv - vec2(0.0, pixel.y)).rgb);
-    float east = luminance(texture2D(uTrailTexture, sampleUv + vec2(pixel.x, 0.0)).rgb);
-    float west = luminance(texture2D(uTrailTexture, sampleUv - vec2(pixel.x, 0.0)).rgb);
-    float edgeStrength = clamp(
-      (abs(centerLuma - north) + abs(centerLuma - south) +
-       abs(centerLuma - east) + abs(centerLuma - west)) * 3.4,
-      0.0,
-      1.0
-    );
+    vec3 sourceCenter = texture2D(uTrailTexture, refractedUv).rgb;
+    vec3 refractedFrame = gatherGlassNeighborhood(refractedUv, pixel);
+    float refractedEnergy = max(luminance(refractedFrame) - 0.035, 0.0);
 
-    vec2 grainCell = floor(gl_FragCoord.xy);
-    float fineGrain = hash21(grainCell);
-    float clusteredGrain = hash21(floor(grainCell * 0.43) + vec2(31.0, 17.0));
-    float stipple = smoothstep(
-      0.54,
-      0.94,
-      fineGrain * 0.7 + clusteredGrain * 0.3 + edgeStrength * 0.25
-    );
+    vec2 gradientOffset = pixel * 2.0;
+    float leftEnergy = luminance(texture2D(uTrailTexture, clampUv(refractedUv - vec2(gradientOffset.x, 0.0), pixel)).rgb);
+    float rightEnergy = luminance(texture2D(uTrailTexture, clampUv(refractedUv + vec2(gradientOffset.x, 0.0), pixel)).rgb);
+    float downEnergy = luminance(texture2D(uTrailTexture, clampUv(refractedUv - vec2(0.0, gradientOffset.y), pixel)).rgb);
+    float upEnergy = luminance(texture2D(uTrailTexture, clampUv(refractedUv + vec2(0.0, gradientOffset.y), pixel)).rgb);
+    vec2 imageGradient = vec2(rightEnergy - leftEnergy, upEnergy - downEnergy);
+    float edgeStrength = clamp(length(imageGradient) * 2.8, 0.0, 1.0);
 
-    float trailMask = smoothstep(0.055, 0.18, centerLuma + edgeStrength * 0.7);
-    float sparkleSignal = clusteredGrain * 0.65 + fineGrain * 0.35 + edgeStrength * 0.08;
-    float sparkle = trailMask * smoothstep(0.88, 0.98, sparkleSignal);
-    float strongestChannel = max(center.r, max(center.g, center.b));
-    float weakestChannel = min(center.r, min(center.g, center.b));
-    float centerChroma = strongestChannel - weakestChannel;
-    vec3 trailHue = strongestChannel > 0.001 ? center / strongestChannel : vec3(0.0);
-    vec3 glassHue = mix(
-      vec3(0.46, 0.68, 0.95),
-      trailHue,
-      smoothstep(0.06, 0.28, centerChroma)
-    );
+    vec3 surfaceNormal = normalize(vec3(-imageGradient * 4.0, 0.9));
+    vec3 lightDirection = normalize(vec3(-0.55, 0.7, 0.8));
+    float facetLight = 0.5 + 0.5 * dot(surfaceNormal, lightDirection);
+    float cellGrain = hash21(glassCell + floor(flowWarp * 11.0));
+    float fineGrain = hash21(floor(gl_FragCoord.xy / 2.0) + vec2(29.0, 13.0));
+    float grainGain = mix(0.72, 1.22, fineGrain * 0.7 + cellGrain * 0.3);
+    float imageCoverage = smoothstep(0.012, 0.16, refractedEnergy + edgeStrength * 0.12);
 
-    vec3 dimmedTrail = mix(center, glassHue * centerLuma, 0.55) * 0.16;
-    float coloredFacet = trailMask * (0.04 + stipple * 0.24 + edgeStrength * 0.14);
-    float silverFacet = trailMask * edgeStrength * (0.08 + stipple * 0.32);
-    vec3 glassColor = glassHue * coloredFacet + vec3(silverFacet);
+    float strongestChannel = max(refractedFrame.r, max(refractedFrame.g, refractedFrame.b));
+    vec3 sourceHue = strongestChannel > 0.001 ? refractedFrame / strongestChannel : vec3(0.0);
+    vec3 glassHue = mix(vec3(0.5, 0.7, 0.98), sourceHue, 0.78);
 
-    vec3 rawColor = dimmedTrail + glassColor;
-    vec3 toneMapped = rawColor / (vec3(0.68) + rawColor) * 1.28;
+    vec3 localContrast = sourceCenter - refractedFrame;
+    vec3 glassDetail = abs(localContrast) * (0.32 + edgeStrength * 0.28);
+    float directionalEmboss = max(dot(imageGradient, normalize(vec2(-0.7, 0.7))), 0.0);
+    vec3 rawColor =
+      refractedFrame * grainGain +
+      glassDetail +
+      glassHue * refractedEnergy * facetLight * 0.08 +
+      vec3(imageCoverage * directionalEmboss * 0.12);
+    vec3 toneMapped = clamp(rawColor, 0.0, 1.0);
     float mappedLuma = luminance(toneMapped);
-    toneMapped = mix(vec3(mappedLuma), toneMapped, 1.8) + vec3(sparkle * 0.85);
-    vec3 finalColor = pow(clamp(toneMapped, 0.0, 1.0), vec3(1.08));
+    toneMapped = mix(vec3(mappedLuma), toneMapped, 0.92);
+    vec3 finalColor = pow(clamp(toneMapped, 0.0, 1.0), vec3(1.02));
     gl_FragColor = vec4(finalColor, 1.0);
   }
 `;
@@ -134,16 +153,14 @@ function createParticleSketch(sketch) {
     constructor(index) {
       this.velocity = sketch.createVector(0, 0);
       this.position = sketch.createVector(0, 0);
-      this.previousPosition = sketch.createVector(0, 0);
       this.color = options.colors[index % options.colors.length];
       this.iterations = Math.ceil(sketch.map(index, 0, options.particleCount, 5, 1));
       this.life = 0;
       this.respawn(true);
     }
 
-    move(frameScale) {
-      this.previousPosition.set(this.position);
-      this.life -= Math.min(sketch.deltaTime, 50) / 1000;
+    move() {
+      this.life -= 0.01666;
       if (this.life < 0) {
         this.respawn();
       }
@@ -156,7 +173,7 @@ function createParticleSketch(sketch) {
           options.noiseScale;
 
         this.velocity.set(sketch.cos(angle), sketch.sin(angle));
-        this.velocity.mult(options.speed * frameScale);
+        this.velocity.mult(options.speed);
         this.position.add(this.velocity);
         iterations -= 1;
       }
@@ -178,24 +195,16 @@ function createParticleSketch(sketch) {
         sketch.random(-50, sketch.width + 50),
         sketch.random(-50, sketch.height + 50)
       );
-      this.previousPosition.set(this.position);
       this.life = randomizeLife ? sketch.random(0, options.lifeSeconds) : options.lifeSeconds;
     }
 
     scalePosition(scaleX, scaleY) {
       this.position.x *= scaleX;
       this.position.y *= scaleY;
-      this.previousPosition.x *= scaleX;
-      this.previousPosition.y *= scaleY;
     }
 
     display(layer) {
-      layer.line(
-        this.previousPosition.x,
-        this.previousPosition.y,
-        this.position.x,
-        this.position.y
-      );
+      layer.ellipse(this.position.x, this.position.y, options.particleSize, options.particleSize);
     }
   }
 
@@ -210,9 +219,7 @@ function createParticleSketch(sketch) {
 
   function configureTrailLayer() {
     trailLayer.pixelDensity(1);
-    trailLayer.strokeCap(sketch.ROUND);
-    trailLayer.strokeWeight(options.particleSize);
-    trailLayer.noFill();
+    trailLayer.noStroke();
   }
 
   sketch.setup = () => {
@@ -235,7 +242,6 @@ function createParticleSketch(sketch) {
 
   sketch.draw = () => {
     const deltaSeconds = Math.min(sketch.deltaTime, 50) / 1000;
-    const frameScale = sketch.min(sketch.deltaTime / 16.6667, 1.5);
     const fadeAmount = 1 - Math.pow(0.5, deltaSeconds / options.trailHalfLifeSeconds);
 
     trailLayer.push();
@@ -247,7 +253,7 @@ function createParticleSketch(sketch) {
     for (let index = 0; index < particles.length; index += 1) {
       const particle = particles[index];
 
-      particle.move(frameScale);
+      particle.move();
       particle.checkEdge();
 
       let fadeRatio = sketch.min((particle.life * 5) / options.lifeSeconds, 1);
@@ -256,12 +262,7 @@ function createParticleSketch(sketch) {
         fadeRatio
       );
 
-      trailLayer.stroke(
-        particle.color[0],
-        particle.color[1],
-        particle.color[2],
-        255 * options.trailOpacity * fadeRatio
-      );
+      trailLayer.fill(particle.color[0], particle.color[1], particle.color[2], 255 * fadeRatio);
       particle.display(trailLayer);
     }
 
