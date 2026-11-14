@@ -70,23 +70,8 @@ const fragmentShaderSource = `
     return clamp(uv, pixel * 8.0, vec2(1.0) - pixel * 8.0);
   }
 
-  vec3 gatherGlassNeighborhood(vec2 uv, vec2 pixel) {
-    vec2 nearOffset = pixel * 2.0;
-    vec2 wideOffset = pixel * 6.0;
-    vec3 center = texture2D(uTrailTexture, clampUv(uv, pixel)).rgb;
-    vec3 horizontal =
-      texture2D(uTrailTexture, clampUv(uv + vec2(nearOffset.x, 0.0), pixel)).rgb +
-      texture2D(uTrailTexture, clampUv(uv - vec2(nearOffset.x, 0.0), pixel)).rgb;
-    vec3 vertical =
-      texture2D(uTrailTexture, clampUv(uv + vec2(0.0, nearOffset.y), pixel)).rgb +
-      texture2D(uTrailTexture, clampUv(uv - vec2(0.0, nearOffset.y), pixel)).rgb;
-    vec3 diagonal =
-      texture2D(uTrailTexture, clampUv(uv + wideOffset, pixel)).rgb +
-      texture2D(uTrailTexture, clampUv(uv - wideOffset, pixel)).rgb +
-      texture2D(uTrailTexture, clampUv(uv + vec2(wideOffset.x, -wideOffset.y), pixel)).rgb +
-      texture2D(uTrailTexture, clampUv(uv + vec2(-wideOffset.x, wideOffset.y), pixel)).rgb;
-    vec3 neighborhoodAverage = (center * 4.0 + horizontal + vertical + diagonal * 0.35) / 9.4;
-    return mix(center, neighborhoodAverage, 0.52);
+  vec3 sampleGlassCell(vec2 uv, vec2 pixel) {
+    return texture2D(uTrailTexture, clampUv(uv, pixel)).rgb;
   }
 
   void main() {
@@ -98,21 +83,41 @@ const fragmentShaderSource = `
       hash21(glassCell + vec2(11.0, 3.0)),
       hash21(glassCell + vec2(5.0, 19.0))
     ) - 0.5;
+    vec2 microCell = floor(gl_FragCoord.xy / 2.0);
+    vec2 pixelJitter = vec2(
+      hash21(microCell + vec2(37.0, 7.0)),
+      hash21(microCell + vec2(13.0, 41.0))
+    ) - 0.5;
     vec2 flowWarp = vec2(
       valueNoise(uv * vec2(10.0, 6.0) + vec2(3.1, 7.7)),
       valueNoise(uv * vec2(8.0, 7.0) + vec2(19.4, 2.3))
     ) - 0.5;
-    vec2 refractedUv = clampUv(uv + (flowWarp * 3.0 + cellJitter * 1.5) * pixel, pixel);
-
-    vec3 sourceCenter = texture2D(uTrailTexture, refractedUv).rgb;
-    vec3 refractedFrame = gatherGlassNeighborhood(refractedUv, pixel);
+    vec2 refractedUv = clampUv(
+      uv + (flowWarp * 2.6 + cellJitter * 1.6 + pixelJitter * 2.4) * pixel,
+      pixel
+    );
+    vec2 secondaryUv = clampUv(
+      uv + (-flowWarp.yx * 2.2 - cellJitter * 1.2 - pixelJitter * 1.8) * pixel,
+      pixel
+    );
+    vec3 primarySample = sampleGlassCell(refractedUv, pixel);
+    vec3 secondarySample = sampleGlassCell(secondaryUv, pixel);
+    float colorBlend = smoothstep(0.18, 0.82, valueNoise(uv * vec2(48.0, 27.0) + 9.0));
+    vec3 refractedFrame = mix(primarySample, secondarySample, colorBlend * 0.58);
     float refractedEnergy = max(luminance(refractedFrame) - 0.035, 0.0);
 
-    vec2 gradientOffset = pixel * 2.0;
-    float leftEnergy = luminance(texture2D(uTrailTexture, clampUv(refractedUv - vec2(gradientOffset.x, 0.0), pixel)).rgb);
-    float rightEnergy = luminance(texture2D(uTrailTexture, clampUv(refractedUv + vec2(gradientOffset.x, 0.0), pixel)).rgb);
-    float downEnergy = luminance(texture2D(uTrailTexture, clampUv(refractedUv - vec2(0.0, gradientOffset.y), pixel)).rgb);
-    float upEnergy = luminance(texture2D(uTrailTexture, clampUv(refractedUv + vec2(0.0, gradientOffset.y), pixel)).rgb);
+    vec2 gradientOffset = pixel * 1.5;
+    vec3 leftSample = sampleGlassCell(refractedUv - vec2(gradientOffset.x, 0.0), pixel);
+    vec3 rightSample = sampleGlassCell(refractedUv + vec2(gradientOffset.x, 0.0), pixel);
+    vec3 downSample = sampleGlassCell(refractedUv - vec2(0.0, gradientOffset.y), pixel);
+    vec3 upSample = sampleGlassCell(refractedUv + vec2(0.0, gradientOffset.y), pixel);
+    vec3 localAverage = (leftSample + rightSample + downSample + upSample) * 0.25;
+    vec3 localContrast = refractedFrame - localAverage;
+    vec3 sharpenedFrame = clamp(refractedFrame + localContrast * 1.15, 0.0, 1.0);
+    float leftEnergy = luminance(leftSample);
+    float rightEnergy = luminance(rightSample);
+    float downEnergy = luminance(downSample);
+    float upEnergy = luminance(upSample);
     vec2 imageGradient = vec2(rightEnergy - leftEnergy, upEnergy - downEnergy);
     float edgeStrength = clamp(length(imageGradient) * 2.8, 0.0, 1.0);
 
@@ -120,25 +125,26 @@ const fragmentShaderSource = `
     vec3 lightDirection = normalize(vec3(-0.55, 0.7, 0.8));
     float facetLight = 0.5 + 0.5 * dot(surfaceNormal, lightDirection);
     float cellGrain = hash21(glassCell + floor(flowWarp * 11.0));
-    float fineGrain = hash21(floor(gl_FragCoord.xy / 2.0) + vec2(29.0, 13.0));
-    float grainGain = mix(0.72, 1.22, fineGrain * 0.7 + cellGrain * 0.3);
+    float fineGrain = hash21(floor(gl_FragCoord.xy / 1.5) + vec2(29.0, 13.0));
+    float grainGain = mix(0.74, 1.24, fineGrain * 0.72 + cellGrain * 0.28);
     float imageCoverage = smoothstep(0.012, 0.16, refractedEnergy + edgeStrength * 0.12);
 
-    float strongestChannel = max(refractedFrame.r, max(refractedFrame.g, refractedFrame.b));
-    vec3 sourceHue = strongestChannel > 0.001 ? refractedFrame / strongestChannel : vec3(0.0);
+    float strongestChannel = max(sharpenedFrame.r, max(sharpenedFrame.g, sharpenedFrame.b));
+    vec3 sourceHue = strongestChannel > 0.001 ? sharpenedFrame / strongestChannel : vec3(0.0);
     vec3 glassHue = mix(vec3(0.5, 0.7, 0.98), sourceHue, 0.78);
 
-    vec3 localContrast = sourceCenter - refractedFrame;
-    vec3 glassDetail = abs(localContrast) * (0.32 + edgeStrength * 0.28);
+    vec3 posterizedFrame = floor(sharpenedFrame * 7.0 + 0.5) / 7.0;
+    vec3 crystallineColor = mix(sharpenedFrame, posterizedFrame, 0.42);
+    vec3 glassDetail = abs(localContrast) * (0.44 + edgeStrength * 0.34);
     float directionalEmboss = max(dot(imageGradient, normalize(vec2(-0.7, 0.7))), 0.0);
     vec3 rawColor =
-      refractedFrame * grainGain +
+      crystallineColor * grainGain +
       glassDetail +
-      glassHue * refractedEnergy * facetLight * 0.08 +
-      vec3(imageCoverage * directionalEmboss * 0.12);
+      glassHue * imageCoverage * edgeStrength * facetLight * 0.16 +
+      vec3(imageCoverage * directionalEmboss * 0.16);
     vec3 toneMapped = clamp(rawColor, 0.0, 1.0);
     float mappedLuma = luminance(toneMapped);
-    toneMapped = mix(vec3(mappedLuma), toneMapped, 0.92);
+    toneMapped = mix(vec3(mappedLuma), toneMapped, 1.08);
     vec3 finalColor = pow(clamp(toneMapped, 0.0, 1.0), vec3(1.02));
     gl_FragColor = vec4(finalColor, 1.0);
   }

@@ -50,11 +50,14 @@ test("the complete accumulated frame receives one full-image GPU glass pass", ()
   assert.match(source, /createShader\(vertexShaderSource, fragmentShaderSource\)/);
   assert.match(source, /glassShader\.setUniform\("uTrailTexture", trailLayer\)/);
   assert.match(source, /uniform sampler2D uTrailTexture/);
-  assert.match(source, /vec3 gatherGlassNeighborhood/);
+  assert.match(source, /vec3 sampleGlassCell/);
   assert.match(source, /vec2 glassCell = floor\(gl_FragCoord\.xy \/ 5\.0\)/);
-  assert.match(source, /pixel \* 6\.0/);
   assert.match(source, /float refractedEnergy/);
   assert.match(source, /float facetLight/);
+  assert.match(source, /vec3 localContrast/);
+  assert.match(source, /vec3 sharpenedFrame/);
+  assert.match(source, /vec2 pixelJitter/);
+  assert.doesNotMatch(source, /neighborhoodAverage|gatherGlassNeighborhood/);
   assert.doesNotMatch(source, /trailMask\s*\*/);
   assert.doesNotMatch(source, /vec3\(silverEdge \+ glassChip\)/);
   assert.doesNotMatch(source, /particleOpacity/);
