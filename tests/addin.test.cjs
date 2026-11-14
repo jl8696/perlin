@@ -74,6 +74,7 @@ test("trail history clears quickly with a time-based half-life", () => {
 
   assert.match(source, /particleCount:\s*400/);
   assert.match(source, /trailHalfLifeSeconds:\s*3/);
+  assert.match(source, /const deltaSeconds = sketch\.deltaTime \/ 1000/);
   assert.match(
     source,
     /const fadeAmount = 1 - Math\.pow\(0\.5, deltaSeconds \/ options\.trailHalfLifeSeconds\)/
@@ -97,7 +98,7 @@ test("particles retain the original point-based p5 rendering", () => {
 test("host resize preserves particle state and the accumulated frame", () => {
   const source = read("content.js");
 
-  assert.match(source, /Math\.min\(sketch\.deltaTime, 50\)/);
+  assert.doesNotMatch(source, /Math\.min\(sketch\.deltaTime, 50\)/);
   assert.match(source, /if \(size\.width === sketch\.width && size\.height === sketch\.height\)/);
   assert.match(source, /const previousFrame = trailLayer\.get\(\)/);
   assert.match(source, /sketch\.resizeCanvas\(size\.width, size\.height, true\)/);

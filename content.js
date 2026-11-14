@@ -241,7 +241,7 @@ function createParticleSketch(sketch) {
   };
 
   sketch.draw = () => {
-    const deltaSeconds = Math.min(sketch.deltaTime, 50) / 1000;
+    const deltaSeconds = sketch.deltaTime / 1000;
     const fadeAmount = 1 - Math.pow(0.5, deltaSeconds / options.trailHalfLifeSeconds);
 
     trailLayer.push();
