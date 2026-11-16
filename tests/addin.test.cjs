@@ -14,6 +14,7 @@ test("content page contains only the full-frame animation host", () => {
   assert.match(html, /id="particle-background"/);
   assert.doesNotMatch(html, /Get slide details|Welcome|pnptelemetry/);
   assert.doesNotMatch(html, /cdn\.jsdelivr\.net\/npm\/p5/);
+  assert.doesNotMatch(html, /dat\.GUI|img-path|credits|class="logo"|Controls|Random|Save/);
 });
 
 test("particle runtime bundles p5 and waits for the Office host", () => {
@@ -23,7 +24,6 @@ test("particle runtime bundles p5 and waits for the Office host", () => {
   assert.match(source, /Office\.onReady/);
   assert.match(source, /Office\.onReady\(\)\.then\(startAnimation\)\.catch/);
   assert.match(source, /new p5\(/);
-  assert.match(source, /windowResized/);
   assert.doesNotMatch(source, /setTimeout\(startAnimation/);
 });
 
@@ -37,81 +37,60 @@ test("animation frame and canvas fill the content add-in", () => {
   assert.match(css, /canvas[\s\S]*position:\s*fixed/);
 });
 
-test("the complete accumulated frame receives one full-image GPU glass pass", () => {
-  const html = read("content.html");
-  const css = read("content.css");
+test("particle options retain the original values and naming", () => {
   const source = read("content.js");
 
-  assert.doesNotMatch(html, /id="powerpoint-glass"|<fe[A-Z]/);
-  assert.doesNotMatch(css, /filter:\s*url/);
-  assert.match(css, /canvas[\s\S]*opacity:\s*0\.65/);
-  assert.match(source, /createCanvas\(size\.width, size\.height, sketch\.WEBGL\)/);
-  assert.match(source, /createGraphics\(size\.width, size\.height\)/);
-  assert.match(source, /createShader\(vertexShaderSource, fragmentShaderSource\)/);
-  assert.match(source, /glassShader\.setUniform\("uTrailTexture", trailLayer\)/);
-  assert.match(source, /uniform sampler2D uTrailTexture/);
-  assert.match(source, /vec3 sampleGlassCell/);
-  assert.match(source, /vec2 glassCell = floor\(gl_FragCoord\.xy \/ 5\.0\)/);
-  assert.match(source, /float refractedEnergy/);
-  assert.match(source, /float facetLight/);
-  assert.match(source, /vec3 localContrast/);
-  assert.match(source, /vec3 sharpenedFrame/);
-  assert.match(source, /vec2 pixelJitter/);
-  assert.match(source, /flowWarp \* 1\.6 \+ cellJitter \* 0\.9 \+ pixelJitter \* 1\.0/);
-  assert.match(source, /colorBlend \* 0\.38/);
-  assert.doesNotMatch(source, /neighborhoodAverage|gatherGlassNeighborhood/);
-  assert.doesNotMatch(source, /trailMask\s*\*/);
-  assert.doesNotMatch(source, /vec3\(silverEdge \+ glassChip\)/);
-  assert.doesNotMatch(source, /particleOpacity/);
-  assert.match(source, /255\s*\*\s*fadeRatio/);
-  assert.match(source, /this\.life -= 0\.01666/);
-  assert.match(source, /this\.velocity\.mult\(0\.2\)/);
-  assert.doesNotMatch(source, /frameScale/);
+  assert.match(source, /Background:\s*"#0a0a0a"/);
+  assert.match(source, /Color1:\s*"#ffffff"/);
+  assert.match(source, /Color2:\s*"#0799f2"/);
+  assert.match(source, /Color3:\s*"#45217c"/);
+  assert.match(source, /Length:\s*10/);
+  assert.match(source, /Nums:\s*400/);
+  assert.match(source, /Size:\s*2/);
   assert.match(source, /noiseScale:\s*800/);
-  assert.doesNotMatch(html, /glass-overlay/);
-  assert.doesNotMatch(css, /glass-overlay\.png/);
-  assert.equal(fs.existsSync(path.join(root, "assets", "glass-overlay.png")), false);
+  assert.match(source, /ColorMode:\s*"Normal"/);
 });
 
-test("trail history clears quickly with a time-based half-life", () => {
+test("setup and draw retain the original particle flow", () => {
   const source = read("content.js");
 
-  assert.match(source, /particleCount:\s*400/);
-  assert.match(source, /trailHalfLifeSeconds:\s*1\.5/);
-  assert.match(source, /const deltaSeconds = sketch\.deltaTime \/ 1000/);
-  assert.match(
-    source,
-    /const fadeAmount = 1 - Math\.pow\(0\.5, deltaSeconds \/ options\.trailHalfLifeSeconds\)/
-  );
-  assert.match(source, /trailLayer\.fill\(10, 10, 10, 255 \* fadeAmount\)/);
-  assert.match(source, /trailLayer\.rect\(0, 0, trailLayer\.width, trailLayer\.height\)/);
-  assert.match(source, /255 \* fadeRatio/);
-  assert.match(source, /vec3 toneMapped/);
+  assert.match(source, /backgroundColor = sketch\.color\(options\.Background\)/);
+  assert.match(source, /sketch\.createCanvas\(size\.width, size\.height\)/);
+  assert.match(source, /sketch\.background\(options\.Background\)/);
+  assert.match(source, /for \(let index = 0; index < 2500; index \+= 1\)/);
+  assert.match(source, /maxLife = options\.Length/);
+  assert.match(source, /for \(let index = 1; index < options\.Nums; index \+= 1\)/);
+  assert.match(source, /sketch\.map\(index, 0, options\.Nums, 5, 1\)/);
+  assert.match(source, /particles\[index\]\.move\(iterations\)/);
+  assert.match(source, /particles\[index\]\.checkEdge\(\)/);
+  assert.match(source, /particles\[index\]\.life \* 5/);
+  assert.match(source, /maxLife - particles\[index\]\.life/);
+  assert.match(source, /sketch\.fill\([\s\S]*alpha \* fadeRatio/);
+  assert.match(source, /particles\[index\]\.display\(radius\)/);
+  assert.doesNotMatch(source, /WEBGL|createGraphics|createShader|fragmentShaderSource|trailLayer/);
 });
 
-test("particles retain the original point-based p5 rendering", () => {
+test("particles retain the original movement and point rendering", () => {
   const source = read("content.js");
 
-  assert.match(source, /colors:\s*\[\s*\[255, 255, 255\]/);
-  assert.match(source, /const iterations = sketch\.map\(index, 0, options\.particleCount, 5, 1\)/);
-  assert.match(source, /particle\.move\(iterations\)/);
-  assert.doesNotMatch(source, /this\.iterations/);
-  assert.match(source, /layer\.ellipse\(this\.position\.x, this\.position\.y, options\.particleSize/);
-  assert.doesNotMatch(source, /layer\.line\(/);
-  assert.doesNotMatch(source, /const particleColor = sketch\.color/);
+  assert.match(source, /this\.vel = sketch\.createVector\(0, 0\)/);
+  assert.match(source, /this\.pos = sketch\.createVector\([\s\S]*sketch\.random\(-50, sketch\.width \+ 50\)/);
+  assert.match(source, /this\.life = sketch\.random\(0, maxLife\)/);
+  assert.match(source, /this\.life -= 0\.01666/);
+  assert.match(source, /sketch\.noise\(this\.pos\.x \/ options\.noiseScale, this\.pos\.y \/ options\.noiseScale\)/);
+  assert.match(source, /sketch\.TWO_PI\s*\*\s*options\.noiseScale/);
+  assert.match(source, /this\.vel\.x = sketch\.cos\(angle\)/);
+  assert.match(source, /this\.vel\.y = sketch\.sin\(angle\)/);
+  assert.match(source, /this\.vel\.mult\(0\.2\)/);
+  assert.match(source, /this\.pos\.add\(this\.vel\)/);
+  assert.match(source, /sketch\.ellipse\(this\.pos\.x, this\.pos\.y, radius, radius\)/);
 });
 
-test("host resize preserves particle state and the accumulated frame", () => {
+test("host events never restart the particle field", () => {
   const source = read("content.js");
 
-  assert.doesNotMatch(source, /Math\.min\(sketch\.deltaTime, 50\)/);
-  assert.match(source, /if \(size\.width === sketch\.width && size\.height === sketch\.height\)/);
-  assert.match(source, /const previousFrame = trailLayer\.get\(\)/);
-  assert.match(source, /sketch\.resizeCanvas\(size\.width, size\.height, true\)/);
-  assert.match(source, /trailLayer\.resizeCanvas\(size\.width, size\.height\)/);
-  assert.match(source, /trailLayer\.image\(previousFrame, 0, 0, size\.width, size\.height\)/);
-  assert.match(source, /particle\.scalePosition\(scaleX, scaleY\)/);
-  assert.doesNotMatch(source, /particles\.forEach\(\(particle\) => particle\.respawn\(true\)\)/);
+  assert.doesNotMatch(source, /touchStarted|mousePressed|setup\(\);|respawn\(true\)/);
+  assert.doesNotMatch(source, /windowResized/);
 });
 
 test("webpack builds the JavaScript runtime and the manifest names the add-in", () => {
