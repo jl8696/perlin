@@ -64,9 +64,8 @@ test("the complete accumulated frame receives one full-image GPU glass pass", ()
   assert.doesNotMatch(source, /vec3\(silverEdge \+ glassChip\)/);
   assert.doesNotMatch(source, /particleOpacity/);
   assert.match(source, /255\s*\*\s*fadeRatio/);
-  assert.match(source, /speed:\s*0\.2/);
   assert.match(source, /this\.life -= 0\.01666/);
-  assert.match(source, /this\.velocity\.mult\(options\.speed\)/);
+  assert.match(source, /this\.velocity\.mult\(0\.2\)/);
   assert.doesNotMatch(source, /frameScale/);
   assert.match(source, /noiseScale:\s*800/);
   assert.doesNotMatch(html, /glass-overlay/);
@@ -94,7 +93,9 @@ test("particles retain the original point-based p5 rendering", () => {
   const source = read("content.js");
 
   assert.match(source, /colors:\s*\[\s*\[255, 255, 255\]/);
-  assert.match(source, /this\.iterations = Math\.ceil/);
+  assert.match(source, /const iterations = sketch\.map\(index, 0, options\.particleCount, 5, 1\)/);
+  assert.match(source, /particle\.move\(iterations\)/);
+  assert.doesNotMatch(source, /this\.iterations/);
   assert.match(source, /layer\.ellipse\(this\.position\.x, this\.position\.y, options\.particleSize/);
   assert.doesNotMatch(source, /layer\.line\(/);
   assert.doesNotMatch(source, /const particleColor = sketch\.color/);

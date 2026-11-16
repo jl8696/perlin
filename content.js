@@ -13,7 +13,6 @@ const options = {
   particleCount: 400,
   particleSize: 2,
   noiseScale: 800,
-  speed: 0.2,
   trailHalfLifeSeconds: 1.5,
 };
 
@@ -160,18 +159,16 @@ function createParticleSketch(sketch) {
       this.velocity = sketch.createVector(0, 0);
       this.position = sketch.createVector(0, 0);
       this.color = options.colors[index % options.colors.length];
-      this.iterations = Math.ceil(sketch.map(index, 0, options.particleCount, 5, 1));
       this.life = 0;
       this.respawn(true);
     }
 
-    move() {
+    move(iterations) {
       this.life -= 0.01666;
       if (this.life < 0) {
         this.respawn();
       }
 
-      let iterations = this.iterations;
       while (iterations > 0) {
         const angle =
           sketch.noise(this.position.x / options.noiseScale, this.position.y / options.noiseScale) *
@@ -179,7 +176,7 @@ function createParticleSketch(sketch) {
           options.noiseScale;
 
         this.velocity.set(sketch.cos(angle), sketch.sin(angle));
-        this.velocity.mult(options.speed);
+        this.velocity.mult(0.2);
         this.position.add(this.velocity);
         iterations -= 1;
       }
@@ -256,10 +253,11 @@ function createParticleSketch(sketch) {
     trailLayer.rect(0, 0, trailLayer.width, trailLayer.height);
     trailLayer.pop();
 
-    for (let index = 0; index < particles.length; index += 1) {
+    for (let index = 1; index < particles.length; index += 1) {
       const particle = particles[index];
+      const iterations = sketch.map(index, 0, options.particleCount, 5, 1);
 
-      particle.move();
+      particle.move(iterations);
       particle.checkEdge();
 
       let fadeRatio = sketch.min((particle.life * 5) / options.lifeSeconds, 1);
