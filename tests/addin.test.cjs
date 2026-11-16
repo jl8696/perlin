@@ -35,6 +35,7 @@ test("animation frame and canvas fill the content add-in", () => {
   assert.match(css, /height:\s*100%/);
   assert.match(css, /overflow:\s*hidden/);
   assert.match(css, /canvas[\s\S]*position:\s*fixed/);
+  assert.match(css, /canvas[\s\S]*opacity:\s*0\.4(?:0)?/);
 });
 
 test("particle options retain the original values and naming", () => {
