@@ -57,6 +57,8 @@ test("the complete accumulated frame receives one full-image GPU glass pass", ()
   assert.match(source, /vec3 localContrast/);
   assert.match(source, /vec3 sharpenedFrame/);
   assert.match(source, /vec2 pixelJitter/);
+  assert.match(source, /flowWarp \* 1\.6 \+ cellJitter \* 0\.9 \+ pixelJitter \* 1\.0/);
+  assert.match(source, /colorBlend \* 0\.38/);
   assert.doesNotMatch(source, /neighborhoodAverage|gatherGlassNeighborhood/);
   assert.doesNotMatch(source, /trailMask\s*\*/);
   assert.doesNotMatch(source, /vec3\(silverEdge \+ glassChip\)/);
@@ -76,7 +78,7 @@ test("trail history clears quickly with a time-based half-life", () => {
   const source = read("content.js");
 
   assert.match(source, /particleCount:\s*400/);
-  assert.match(source, /trailHalfLifeSeconds:\s*3/);
+  assert.match(source, /trailHalfLifeSeconds:\s*1\.5/);
   assert.match(source, /const deltaSeconds = sketch\.deltaTime \/ 1000/);
   assert.match(
     source,

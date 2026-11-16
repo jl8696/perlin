@@ -14,7 +14,7 @@ const options = {
   particleSize: 2,
   noiseScale: 800,
   speed: 0.2,
-  trailHalfLifeSeconds: 3,
+  trailHalfLifeSeconds: 1.5,
 };
 
 const vertexShaderSource = `
@@ -93,17 +93,17 @@ const fragmentShaderSource = `
       valueNoise(uv * vec2(8.0, 7.0) + vec2(19.4, 2.3))
     ) - 0.5;
     vec2 refractedUv = clampUv(
-      uv + (flowWarp * 2.6 + cellJitter * 1.6 + pixelJitter * 2.4) * pixel,
+      uv + (flowWarp * 1.6 + cellJitter * 0.9 + pixelJitter * 1.0) * pixel,
       pixel
     );
     vec2 secondaryUv = clampUv(
-      uv + (-flowWarp.yx * 2.2 - cellJitter * 1.2 - pixelJitter * 1.8) * pixel,
+      uv + (-flowWarp.yx * 1.3 - cellJitter * 0.7 - pixelJitter * 0.8) * pixel,
       pixel
     );
     vec3 primarySample = sampleGlassCell(refractedUv, pixel);
     vec3 secondarySample = sampleGlassCell(secondaryUv, pixel);
     float colorBlend = smoothstep(0.18, 0.82, valueNoise(uv * vec2(48.0, 27.0) + 9.0));
-    vec3 refractedFrame = mix(primarySample, secondarySample, colorBlend * 0.58);
+    vec3 refractedFrame = mix(primarySample, secondarySample, colorBlend * 0.38);
     float refractedEnergy = max(luminance(refractedFrame) - 0.035, 0.0);
 
     vec2 gradientOffset = pixel * 1.5;
